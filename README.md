@@ -14,8 +14,7 @@ The privacy budget is document-level: a document of L sentences spends ε/L per 
 ## Install
 
 ```bash
-git clone https://github.com/thomouvic/losanr.git
-cd losanr
+# clone or download this repository, then from its root:
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
