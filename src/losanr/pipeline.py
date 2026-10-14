@@ -91,10 +91,12 @@ class LoSanRPipeline:
             return x
         return x / n
 
-    def sanitize_document(self, document: str, precomputed_sentences: list[str] = None, precomputed_embeddings: np.ndarray = None) -> str:
+    def sanitize_document(self, document: str, precomputed_sentences: list[str] = None, precomputed_embeddings: np.ndarray = None, return_sentences: bool = False) -> str | list[str]:
+        """Sanitize one document. Returns the replacement sentences joined by spaces, or the
+        list of replacement sentences when return_sentences is set."""
         sentences = precomputed_sentences if precomputed_sentences is not None else split_into_sentences(document)
         if not sentences:
-            return document
+            return [] if return_sentences else document
 
         if precomputed_embeddings is not None:
             embeddings = precomputed_embeddings
@@ -154,7 +156,7 @@ class LoSanRPipeline:
             replacements.append(self.pool_sentences[best_idx])
             prev_replacement_emb = self.pool_embeddings[best_idx]
 
-        return " ".join(replacements)
+        return replacements if return_sentences else " ".join(replacements)
 
     def sanitize_batch(self, documents: list[str]) -> list[str]:
         return [self.sanitize_document(doc) for doc in documents]

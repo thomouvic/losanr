@@ -23,7 +23,8 @@ def _hf_parquet_snapshot(repo_id: str, config: str = "plain_text"):
         if candidates:
             snap = candidates[-1]
             files = {}
-            for p in glob.glob(os.path.join(snap, "*.parquet")):
+            # sorted: multi-shard splits must be read in shard order
+            for p in sorted(glob.glob(os.path.join(snap, "*.parquet"))):
                 # e.g. train-00000-of-00001.parquet
                 base = os.path.basename(p)
                 split = base.split("-")[0]
@@ -88,7 +89,7 @@ def _load_snips(data_dir):
 def _load_amazon(data_dir):
     # Full dataset is 3.6M train / 400k test -- too large.
     # We take 25k train + 25k test (same scale as IMDB) for tractability.
-    snap = _hf_parquet_snapshot("amazon_polarity")
+    snap = _hf_parquet_snapshot("amazon_polarity", config="amazon_polarity")
     if snap is not None:
         ds = load_dataset("parquet", data_files={
             "train": snap["train"], "test": snap["test"]})
@@ -120,7 +121,7 @@ def _load_drugscom(data_dir):
 def _load_agnews(data_dir):
     # AG News: 4-class topic classification (World, Sports, Business, Sci/Tech)
     # Full dataset is 120k train / 7.6k test. We take 25k train for tractability.
-    snap = _hf_parquet_snapshot("ag_news")
+    snap = _hf_parquet_snapshot("ag_news", config="data")
     if snap is not None:
         ds = load_dataset("parquet", data_files={
             "train": snap["train"], "test": snap["test"]})
@@ -165,3 +166,40 @@ def split_into_sentences(text: str) -> list[str]:
     import re
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     return [s.strip() for s in sentences if len(s.strip()) > 5]
+
+
+def load_public_pool_texts(name: str, max_docs: int = None) -> list[str]:
+    """Load a text-only public corpus for use as a retrieval pool / PCA fit set.
+
+    Unlike load_dataset_splits, these corpora have no labels and no train/test
+    structure: they only ever serve as public-side data (PCA fitting, clustering,
+    retrieval). Used by analysis/corpus_tiers.py for the corpus-mismatch tiers.
+    """
+    if name == "rotten_tomatoes":
+        # Movie-review snippets (Pang & Lee 2005): same topic and genre as IMDB,
+        # different source and register. ~10.7k snippets across all splits; the
+        # HF version is lowercased. Labels are ignored, so all splits are usable.
+        texts = []
+        for split in ("train", "validation", "test"):
+            ds = load_dataset("rotten_tomatoes", split=split)
+            texts.extend(r["text"] for r in ds)
+    elif name == "wikitext":
+        # Encyclopedic text (wikitext-103): different genre and topic from any
+        # review corpus. Each non-heading line is a paragraph of several sentences.
+        ds = load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1",
+                          split="train", streaming=True)
+        texts = []
+        for r in ds:
+            line = r["text"].strip()
+            if not line or line.startswith("="):
+                continue
+            texts.append(line)
+            if max_docs and len(texts) >= max_docs:
+                break
+    else:
+        raise ValueError(f"Unknown public corpus: {name}. "
+                         f"Available: rotten_tomatoes, wikitext")
+
+    if max_docs:
+        texts = texts[:max_docs]
+    return texts

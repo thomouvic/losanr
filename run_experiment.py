@@ -253,7 +253,7 @@ def main():
                         help="'honest_doc': epsilon is document-level budget, split across sentences "
                              "via basic composition (paper default). "
                              "'per_sentence': epsilon is per-sentence (no composition; reproduces the "
-                             "inflated reporting style we critique in Section 2.5).")
+                             "inflated reporting style discussed in the paper's budget-accounting appendix).")
     parser.add_argument("--model", type=str, default="all-MiniLM-L6-v2")
     parser.add_argument("--output_dir", type=str, default="results")
     parser.add_argument("--skip_perplexity", action="store_true")

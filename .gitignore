@@ -14,6 +14,12 @@ results/
 *.pkl
 *.npy
 *.jsonl
+logs/
+variant_jobs.txt
+
+# API keys (attacks/llm_attack.py reads OPENROUTER_API_KEY from .env)
+.env
+.env.*
 
 # Editors
 .vscode/
